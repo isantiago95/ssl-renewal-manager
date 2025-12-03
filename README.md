@@ -1,6 +1,6 @@
 # SSL Certificate Manager
 
-Simple Docker-based SSL certificate renewal system using Let's Encrypt. Works with any domain and exports certificates for easy import into web servers, reverse proxies, or NAS systems like Synology DSM.
+Simple Docker-based SSL certificate renewal system using Let's Encrypt. Originally created for Synology NAS systems that don't support automatic SSL renewal for custom domains, but the generated certificate files work with any web server (Nginx, Apache, IIS, etc.).
 
 ## 🎯 What This Does
 
@@ -84,9 +84,9 @@ You should see: `privkey.pem` and `fullchain.pem` ready for use!
 ./renew-ssl.sh --first-cert
 ```
 
-### Automated Renewal Setup
+## Automated Renewal Setup
 
-#### Option 1: Cron job (not tested)
+### Option 1: Cron job (not tested)
 
 Set up a monthly cron job for automatic renewal:
 
@@ -95,11 +95,11 @@ Set up a monthly cron job for automatic renewal:
 crontab -e
 
 # Add this line for monthly renewal on the 1st at 2 AM
-# Replace /path/to/ssl-manager and your-domain.com with your values
-0 2 1 * * cd /path/to/ssl-manager && ./renew-ssl.sh your-domain.com
+# Replace /volume1/docker/ssl-manager and your-domain.com with your actual path and domain
+0 2 1 * * cd /volume1/docker/ssl-manager/renew-ssl.sh your-domain.com
 ```
 
-#### Option 2: Synology DSM Task Scheduler (Tested)
+### Option 2: Synology DSM Task Scheduler (Tested)
 
 **Step 1: Create the Task**
 
@@ -135,11 +135,12 @@ Add the following user-defined script:
 
 ```bash
 #!/bin/bash
-# replace your-domain.com
-/volume1/docker/ssl-manager/renew-ssl.sh your-domain.com
+# Replace /volume1/docker/ssl-manager with your actual path (where you cloned this repo)
+# Replace your-domain.com with your actual domain
+cd /volume1/docker/ssl-manager/renew-ssl.sh your-domain.com
 ```
 
-## 📋 Certificate Usage
+## 📁 Certificate Files Formats
 
 After successful renewal, certificates are exported to `./certificates/your_domain_com/` in **multiple formats**:
 
@@ -164,27 +165,30 @@ After successful renewal, certificates are exported to `./certificates/your_doma
 - **`your-domain.p7b`** - Certificate chain (PKCS#7 format)
 - **`your-domain.pfx`** - Certificate + Key bundle (PKCS#12 format, no password)
 
-### Server Import Examples
+## Server Import Examples
 
-#### Synology DSM (Tested)
-
-**Option 1: Standard PEM formats**
+### Synology DSM (Tested)
 
 1. Download certificate files to your computer
 2. Go to **DSM > Control Panel > Security > Certificate**
 3. Click **Add > Import certificate**
-4. Select:
-   - **Private Key**: `privkey.pem` or `your-domain.key`
-   - **Certificate**: `fullchain.pem` or `your-domain.crt`
-   - **Intermediate Certificate**: `intermediate.crt` (if required by DSM)
+4. Then we have 2 options:
 
-**Option 2: Individual files (recommended)**
+   1. **Option 1 (recommended): Individual files**
+      - **Private Key**: `your-domain.key`
+      - **Certificate**: `your-domain.crt`
+      - **Intermediate Certificate**: `your-domain.ca-bundle` (Optional, see note below)
 
-- **Private Key**: `your-domain.key`
-- **Certificate**: `your-domain.crt`
-- **Intermediate Certificate**: `intermediate.crt` or `your-domain.ca-bundle`
+   > Note: Intermediate certificate for Synology DSM is optional, but some services may require it, such as the VPN Server. (See [this post](https://community.synology.com/enu/forum/1/post/128099))
 
-#### Other Servers
+   ![dsm-import-files-image](images/dsm-import-ssl-files.png)
+
+   2. **Option 2: Standard PEM format**
+      1. - **Private Key**: `privkey.pem` or `your-domain.key`
+      2. - **Certificate**: `fullchain.pem` or `your-domain.crt`
+      3. - **Intermediate Certificate**: `your-domain.ca-bundle` (optional)
+
+### Other Cloud Servers
 
 The generated certificate files are compatible with most web servers and applications:
 
@@ -195,7 +199,7 @@ The generated certificate files are compatible with most web servers and applica
 
 **Note**: Server-specific configuration examples are not provided as they haven't been tested. Consult your server's SSL certificate installation documentation.
 
-## 🔧 Configuration
+## ℹ️ Information
 
 ### Multiple Domains
 
@@ -226,16 +230,28 @@ cat ./logs/export.log
 # Check exported certificates
 ls -la ./certificates/your_domain_com/*.pem
 
-# Verify certificate expiration
+# Verify certificate expiration (remember to use the domain with underscore name)
 openssl x509 -in ./certificates/your_domain_com/fullchain.pem -noout -dates
 ```
 
 ## ⚠️ Important Notes
 
+- **Project Origin**: This project was created specifically for Synology NAS systems that don't support automatic SSL renewal for custom domains. However, the generated certificate files are compatible with any web server (Nginx, Apache, IIS, etc.).
+
+- **User Responsibility**: You are responsible for:
+
+  - Properly copying certificate files to the correct paths based on your server configuration
+  - Renewing certificates **before they expire** (Let's Encrypt certificates expire every 90 days)
+  - Testing the renewal process before setting up automation
+
+- **SSH Setup for NAS/Cloud Servers**: To smoothly manage SSL renewals on any cloud server or NAS system:
+
+  1. Connect via SSH to your server/NAS
+  2. Clone this project to a familiar path (e.g., `/volume1/docker/ssl-manager` for Synology)
+  3. Ensure Docker and Docker Compose are installed and accessible
+
 - **Manual DNS Challenge**: Renewals require manual DNS TXT record updates (cannot be fully automated)
 - **Backup**: Always backup existing certificates before renewal
-- **Docker Required**: Ensure Docker and Docker Compose are installed
-- **Testing**: Test renewal process manually before setting up automation
 
 ## 🛠 Troubleshooting
 
