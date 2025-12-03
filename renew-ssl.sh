@@ -150,25 +150,37 @@ CERT_FOLDER="$PROJECT_DIR/certificates/$DOMAIN_FOLDER"
 echo "Checking for certificates in: $CERT_FOLDER"
 echo ""
 
-if [ -f "$CERT_FOLDER/privkey.pem" ] && [ -f "$CERT_FOLDER/fullchain.pem" ]; then
-    echo "✅ SUCCESS: Certificate files found and ready for import!"
+# Check for required certificate formats
+REQUIRED_KEY="$CERT_FOLDER/$DOMAIN_NAME.key"
+REQUIRED_CRT="$CERT_FOLDER/$DOMAIN_NAME.crt"
+REQUIRED_INT="$CERT_FOLDER/intermediate.crt"
+
+if [ -f "$REQUIRED_KEY" ] && [ -f "$REQUIRED_CRT" ] && [ -f "$REQUIRED_INT" ]; then
+    echo "✅ SUCCESS: All certificate files generated and ready for use!"
     echo ""
-    echo "📁 Certificate Files for $DOMAIN_NAME:"
-    echo "  Private Key: privkey.pem"
-    echo "  Full Chain: fullchain.pem (certificate + intermediate)"
+    echo "🔑 REQUIRED FORMATS (ready to use):"
+    echo "  - $DOMAIN_NAME.key (Private Key)"
+    echo "  - $DOMAIN_NAME.crt (Certificate)" 
+    echo "  - intermediate.crt (Intermediate Certificate)"
     echo ""
-    ls -la "$CERT_FOLDER"/*.pem 2>/dev/null
+    echo "📋 ALL GENERATED FORMATS:"
+    ls -la "$CERT_FOLDER"/ 2>/dev/null
     echo ""
     
     # Show certificate details
     echo "🔍 Certificate Details:"
-    openssl x509 -in "$CERT_FOLDER/fullchain.pem" -noout -subject -issuer -dates 2>/dev/null || echo "Could not read certificate details"
+    openssl x509 -in "$REQUIRED_CRT" -noout -subject -issuer -dates 2>/dev/null || echo "Could not read certificate details"
     
 else
-    echo "❌ FAILURE: Certificate files not found"
+    echo "❌ FAILURE: Required certificate files not found"
+    echo ""
+    echo "📁 Expected files:"
+    echo "  - $DOMAIN_NAME.key (Private Key)"
+    echo "  - $DOMAIN_NAME.crt (Certificate)"
+    echo "  - intermediate.crt (Intermediate Certificate)"
     echo ""
     echo "📁 Directory contents:"
-    ls -la "$CERT_DIR"/ 2>/dev/null
+    ls -la "$CERT_FOLDER"/ 2>/dev/null || echo "Directory does not exist"
     echo ""
     
     # Show more detailed error logs
@@ -188,19 +200,27 @@ echo "Process Summary"
 echo "======================================================"
 echo "End time: $(date)"
 
-if [ -f "$CERT_FOLDER/privkey.pem" ] && [ -f "$CERT_FOLDER/fullchain.pem" ]; then
+if [ -f "$REQUIRED_KEY" ] && [ -f "$REQUIRED_CRT" ] && [ -f "$REQUIRED_INT" ]; then
     if [ "$FIRST_CERT_MODE" = true ]; then
         echo "📧 RESULT: SUCCESS - Initial SSL certificates created and exported!"
-        echo "   → Your SSL certificates for $DOMAIN_NAME are ready"
+        echo "   → Your SSL certificates for $DOMAIN_NAME are ready in ALL formats"
         echo "   → Set up automatic renewal with: ./renew-ssl.sh $DOMAIN_NAME"
     else
         echo "📧 RESULT: SUCCESS - SSL certificates renewed for $DOMAIN_NAME"
     fi
-    echo "   → Certificate files in certificates/$DOMAIN_FOLDER/:"
-    echo "     • Private Key: privkey.pem"
-    echo "     • Full Chain: fullchain.pem (includes certificate + intermediate)"
-    echo "   → Files location: $CERT_FOLDER"
-    echo "   → Import via your server's SSL certificate management interface"
+    echo ""
+    echo "🔑 REQUIRED FORMATS:"
+    echo "   → $DOMAIN_NAME.key (Private Key)"
+    echo "   → $DOMAIN_NAME.crt (Certificate)"
+    echo "   → intermediate.crt (Intermediate Certificate)"
+    echo ""
+    echo "📋 ALL FORMATS AVAILABLE:"
+    echo "   → Standard: .pem files (privkey, cert, chain, fullchain)"
+    echo "   → Binary: .der files (certificate and key)"
+    echo "   → PKCS#7: .p7b file (certificate chain)"
+    echo "   → PKCS#12: .pfx file (certificate + key bundle)"
+    echo ""
+    echo "📁 Files location: $CERT_FOLDER"
 else
     if [ "$FIRST_CERT_MODE" = true ]; then
         echo "📧 RESULT: FAILED - Initial certificate creation unsuccessful"

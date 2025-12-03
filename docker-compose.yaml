@@ -30,21 +30,58 @@ services:
         # Create directory for domain certificates
         mkdir -p /export/\$DOMAIN_FOLDER &&
         
-        # Copy certificate files (keep original names)
+        echo 'Generating all certificate formats...' &&
+        
+        # 1. Standard PEM formats (original Let's Encrypt files)
         cp /certs/live/\$DOMAIN_NAME/privkey.pem /export/\$DOMAIN_FOLDER/ &&
+        cp /certs/live/\$DOMAIN_NAME/cert.pem /export/\$DOMAIN_FOLDER/ &&
+        cp /certs/live/\$DOMAIN_NAME/chain.pem /export/\$DOMAIN_FOLDER/ &&
         cp /certs/live/\$DOMAIN_NAME/fullchain.pem /export/\$DOMAIN_FOLDER/ &&
         
+        # 2. Required formats: .key, .crt, intermediate
+        cp /certs/live/\$DOMAIN_NAME/privkey.pem /export/\$DOMAIN_FOLDER/\$DOMAIN_NAME.key &&
+        cp /certs/live/\$DOMAIN_NAME/cert.pem /export/\$DOMAIN_FOLDER/\$DOMAIN_NAME.crt &&
+        cp /certs/live/\$DOMAIN_NAME/chain.pem /export/\$DOMAIN_FOLDER/intermediate.crt &&
+        
+        # 3. Additional formats for compatibility
+        # DER format (binary)
+        openssl x509 -in /certs/live/\$DOMAIN_NAME/cert.pem -outform DER -out /export/\$DOMAIN_FOLDER/\$DOMAIN_NAME.der &&
+        openssl rsa -in /certs/live/\$DOMAIN_NAME/privkey.pem -outform DER -out /export/\$DOMAIN_FOLDER/\$DOMAIN_NAME.key.der &&
+        
+        # P7B format (PKCS#7)
+        openssl crl2pkcs7 -nocrl -certfile /certs/live/\$DOMAIN_NAME/fullchain.pem -out /export/\$DOMAIN_FOLDER/\$DOMAIN_NAME.p7b &&
+        
+        # PFX format (PKCS#12) - requires password, using empty password
+        openssl pkcs12 -export -out /export/\$DOMAIN_FOLDER/\$DOMAIN_NAME.pfx -inkey /certs/live/\$DOMAIN_NAME/privkey.pem -in /certs/live/\$DOMAIN_NAME/fullchain.pem -passout pass: &&
+        
         # Set proper permissions
-        chmod 644 /export/\$DOMAIN_FOLDER/*.pem &&
+        chmod 644 /export/\$DOMAIN_FOLDER/*.* &&
         
         # Log success
-        echo \"Certificates exported successfully for \$DOMAIN_NAME at \$(date)\" >> /var/log/ssl/export.log &&
+        echo \"All certificate formats exported successfully for \$DOMAIN_NAME at \$(date)\" >> /var/log/ssl/export.log &&
         echo 'SUCCESS: SSL certificates ready for import' &&
         echo 'Domain: \$DOMAIN_NAME' &&
-        echo 'Files generated in certificates/\$DOMAIN_FOLDER/:' &&
-        echo '  - privkey.pem (private key)' &&
-        echo '  - fullchain.pem (certificate + chain)' &&
-        ls -la /export/\$DOMAIN_FOLDER/*.pem 2>/dev/null || true
+        echo '' &&
+        echo 'Certificate files generated in certificates/\$DOMAIN_FOLDER/:' &&
+        echo '' &&
+        echo '🔑 REQUIRED FORMATS:' &&
+        echo '  - \$DOMAIN_NAME.key (Private Key)' &&
+        echo '  - \$DOMAIN_NAME.crt (Certificate)' &&
+        echo '  - intermediate.crt (Intermediate Certificate)' &&
+        echo '' &&
+        echo '📋 STANDARD FORMATS:' &&
+        echo '  - privkey.pem (Private Key - PEM)' &&
+        echo '  - cert.pem (Certificate - PEM)' &&
+        echo '  - chain.pem (Certificate Chain - PEM)' &&
+        echo '  - fullchain.pem (Full Chain - PEM)' &&
+        echo '' &&
+        echo '🔧 ADDITIONAL FORMATS:' &&
+        echo '  - \$DOMAIN_NAME.der (Certificate - DER binary)' &&
+        echo '  - \$DOMAIN_NAME.key.der (Private Key - DER binary)' &&
+        echo '  - \$DOMAIN_NAME.p7b (Certificate Chain - PKCS#7)' &&
+        echo '  - \$DOMAIN_NAME.pfx (Certificate + Key - PKCS#12, no password)' &&
+        echo '' &&
+        ls -la /export/\$DOMAIN_FOLDER/ 2>/dev/null || true
       else
         echo 'ERROR: Certificate files not found at /certs/live/\$DOMAIN_NAME/' &&
         echo 'Available directories:' &&
