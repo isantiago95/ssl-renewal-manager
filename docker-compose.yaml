@@ -1,6 +1,6 @@
 services:
   certbot-renew:
-    image: certbot/certbot:latest
+    image: certbot/certbot:v5.2.0
     container_name: certbot-renew
     volumes:
       - ./letsencrypt-config:/etc/letsencrypt
@@ -10,7 +10,7 @@ services:
     restart: 'no'
 
   ssl-export:
-    image: alpine:latest
+    image: alpine:3.22.2
     container_name: ssl-export
     volumes:
       - ./letsencrypt-config:/certs:ro

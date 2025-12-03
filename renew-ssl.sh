@@ -80,7 +80,7 @@ if [ "$FIRST_CERT_MODE" = true ]; then
         -v "$PROJECT_DIR/letsencrypt-config:/etc/letsencrypt" \
         -v "$PROJECT_DIR/letsencrypt-lib:/var/lib/letsencrypt" \
         certbot/certbot certonly -v --manual --preferred-challenges dns \
-        -d "$DOMAIN_NAME" -d "*.$DOMAIN_NAME" \
+        -d "*.$DOMAIN_NAME" \
         --agree-tos --email "$EMAIL_ADDRESS"
     
     CERTBOT_EXIT_CODE=$?
