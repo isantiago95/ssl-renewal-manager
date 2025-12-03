@@ -38,6 +38,9 @@ ssl-manager/
 # Clone the repository
 git clone https://github.com/isantiago95/ssl-renewal-manager
 cd ssl-manager
+
+# Make the script executable
+chmod +x renew-ssl.sh
 ```
 
 ### 2. Create Your First Certificate
@@ -50,7 +53,7 @@ Run the script with the `--first-cert` flag to create your initial certificate:
 
 The script will interactively ask you for:
 
-- **Domain name** (e.g., `example.com`) - supports wildcards
+- **Domain name** (e.g., `your-domain.com`) - supports wildcards
 - **Email address** (for Let's Encrypt account registration)
 
 **Important**: During this process, you'll need to add a DNS TXT record to your domain DNS registry to validate ownership. Follow the prompts carefully and wait for DNS propagation before continuing.
@@ -59,9 +62,9 @@ The script will interactively ask you for:
 
 ```bash
 # Check that certificates were created and exported,
-# Replace "example_com" with your domain name switching the `dot` with `underscore`:
-# example.com -> example_com
-ls -la ./certificates/example_com/
+# Replace "your_domain_com" with your domain name switching the `dot` with `underscore`:
+# your-domain.com -> your_domain_com
+ls -la ./certificates/your_domain_com/
 ```
 
 You should see: `privkey.pem` and `fullchain.pem` ready for use!
@@ -75,7 +78,7 @@ You should see: `privkey.pem` and `fullchain.pem` ready for use!
 ./renew-ssl.sh
 
 # Or specify domain directly
-./renew-ssl.sh example.com
+./renew-ssl.sh your-domain.com
 
 # For first-time certificate creation
 ./renew-ssl.sh --first-cert
@@ -90,19 +93,20 @@ Set up a monthly cron job for automatic renewal:
 crontab -e
 
 # Add this line for monthly renewal on the 1st at 2 AM
-# Replace /path/to/ssl-manager and example.com with your values
-0 2 1 * * cd /path/to/ssl-manager && ./renew-ssl.sh example.com
+# Replace /path/to/ssl-manager and your-domain.com with your values
+0 2 1 * * cd /path/to/ssl-manager && ./renew-ssl.sh your-domain.com
 ```
 
 ## 📋 Certificate Usage
 
 After successful renewal, certificates are exported to `./certificates/your_domain_com/` in **multiple formats**:
 
-### 🔑 Required Formats (Your Request)
+### 🔑 Required Formats
 
 - **`your-domain.key`** - Private Key (.key format)
 - **`your-domain.crt`** - Certificate (.crt format)
-- **`intermediate.crt`** - Intermediate Certificate (.crt format)
+- **`intermediate.crt`** - Intermediate Certificate Chain (.crt format)
+- **`your-domain.ca-bundle`** - CA Bundle (same as intermediate, different naming)
 
 ### 📋 Standard PEM Formats
 
@@ -120,87 +124,34 @@ After successful renewal, certificates are exported to `./certificates/your_doma
 
 ### Server Import Examples
 
-#### Synology DSM
+#### Synology DSM (Tested)
 
-**Option 1: Standard formats**
+**Option 1: Standard PEM formats**
 
-1. Download cert files to your computer
+1. Download certificate files to your computer
 2. Go to **DSM > Control Panel > Security > Certificate**
 3. Click **Add > Import certificate**
 4. Select:
    - **Private Key**: `privkey.pem` or `your-domain.key`
-   - **Certificate**: `fullchain.pem` or combine `your-domain.crt` + `intermediate.crt`
+   - **Certificate**: `fullchain.pem` or `your-domain.crt`
+   - **Intermediate Certificate**: `intermediate.crt` (if required by DSM)
 
-**Option 2: Individual files (if DSM requires separate intermediate)**
+**Option 2: Individual files (recommended)**
 
 - **Private Key**: `your-domain.key`
 - **Certificate**: `your-domain.crt`
-- **Intermediate**: `intermediate.crt`
+- **Intermediate Certificate**: `intermediate.crt` or `your-domain.ca-bundle`
 
-#### Nginx
+#### Other Servers
 
-```bash
-# Option 1: Standard PEM files
-sudo cp ./certificates/your_domain_com/fullchain.pem /etc/nginx/ssl/
-sudo cp ./certificates/your_domain_com/privkey.pem /etc/nginx/ssl/
+The generated certificate files are compatible with most web servers and applications:
 
-# Option 2: .key/.crt files
-sudo cp ./certificates/your_domain_com/your-domain.crt /etc/nginx/ssl/
-sudo cp ./certificates/your_domain_com/your-domain.key /etc/nginx/ssl/
-sudo cp ./certificates/your_domain_com/intermediate.crt /etc/nginx/ssl/
+- **Nginx, Apache, IIS**: Use the appropriate combination of `.key`, `.crt`, and intermediate files
+- **Load Balancers**: Typically use `.crt` + `.key` + `intermediate.crt`
+- **Java Applications**: Use `.pfx` file or convert PEM files as needed
+- **Docker/Kubernetes**: Use standard PEM files (`privkey.pem`, `fullchain.pem`)
 
-# Nginx config (choose one)
-ssl_certificate /etc/nginx/ssl/fullchain.pem;      # Full chain
-ssl_certificate_key /etc/nginx/ssl/privkey.pem;   # Private key
-
-# OR for separate files:
-ssl_certificate /etc/nginx/ssl/your-domain.crt;
-ssl_certificate_key /etc/nginx/ssl/your-domain.key;
-ssl_trusted_certificate /etc/nginx/ssl/intermediate.crt;
-```
-
-#### Apache
-
-```bash
-# Option 1: Individual files (recommended)
-sudo cp ./certificates/your_domain_com/your-domain.crt /etc/apache2/ssl/
-sudo cp ./certificates/your_domain_com/your-domain.key /etc/apache2/ssl/
-sudo cp ./certificates/your_domain_com/intermediate.crt /etc/apache2/ssl/
-
-# Option 2: Full chain
-sudo cp ./certificates/your_domain_com/fullchain.pem /etc/apache2/ssl/
-sudo cp ./certificates/your_domain_com/privkey.pem /etc/apache2/ssl/
-
-# Apache config (choose one approach)
-# Approach 1: Separate files
-SSLCertificateFile /etc/apache2/ssl/your-domain.crt
-SSLCertificateKeyFile /etc/apache2/ssl/your-domain.key
-SSLCertificateChainFile /etc/apache2/ssl/intermediate.crt
-
-# Approach 2: Full chain
-SSLCertificateFile /etc/apache2/ssl/fullchain.pem
-SSLCertificateKeyFile /etc/apache2/ssl/privkey.pem
-```
-
-#### Windows IIS
-
-```bash
-# Use the PKCS#12 (.pfx) file - ready to import directly
-# File: your-domain.pfx (no password required)
-```
-
-1. Open IIS Manager
-2. Go to Server Certificates
-3. Click "Import..."
-4. Select `your-domain.pfx`
-5. Leave password blank (no password set)
-
-#### Other Applications
-
-- **Java Applications**: Use `your-domain.pfx` or convert PEM files to JKS
-- **Load Balancers**: Usually prefer `your-domain.crt` + `your-domain.key` + `intermediate.crt`
-- **Cloud Services**: Most accept the individual `.crt`, `.key`, and intermediate files
-- **Docker/Kubernetes**: Standard PEM files (`privkey.pem`, `fullchain.pem`)
+**Note**: Server-specific configuration examples are not provided as they haven't been tested. Consult your server's SSL certificate installation documentation.
 
 ## 🔧 Configuration
 
@@ -210,7 +161,7 @@ The system supports multiple domains automatically. Each domain gets its own fol
 
 ```
 certificates/
-├── example_com/
+├── your_domain_com/
 │   ├── privkey.pem
 │   └── fullchain.pem
 └── another_domain_org/
@@ -254,21 +205,16 @@ ls -la ./letsencrypt-config/live/your-domain.com/
 
 # Check if certificates were exported
 ls -la ./certificates/your_domain_com/
-```
 
-### Docker Issues
-
-```bash
-# Check container logs
-docker logs certbot-renew
-docker logs ssl-export
+# create new certificates using the --first-cert flag
+./renew-ssl.sh --first-cert
 ```
 
 ### Permission Issues
 
 ```bash
 # Fix permissions
-chmod 644 ./certificates/your_domain_com/*.pem
+chmod +x renew-ssl.sh
 ```
 
 ---
@@ -280,20 +226,24 @@ chmod 644 ./certificates/your_domain_com/*.pem
 git clone https://github.com/isantiago95/ssl-renewal-manager
 cd ssl-manager
 
+# Make the script executable
+chmod +x renew-ssl.sh
+
 # Create your first certificate (interactive)
 ./renew-ssl.sh --first-cert
-# Enter your domain: example.com
-# Enter your email: your-email@example.com
+# Enter your domain: your-domain.com
+# Enter your email: your-email@your-domain.com
 # Follow DNS TXT record instructions
 
 # For renewals, just run:
-./renew-ssl.sh example.com
+./renew-ssl.sh your-domain.com
 
 # Your certificates are now in ALL formats:
 # Required formats:
-# ./certificates/example_com/example.com.key
-# ./certificates/example_com/example.com.crt
-# ./certificates/example_com/intermediate.crt
+# ./certificates/your_domain_com/your-domain.com.key
+# ./certificates/your_domain_com/your-domain.com.crt
+# ./certificates/your_domain_com/intermediate.crt
+# ./certificates/your_domain_com/your-domain.com.ca-bundle
 #
 # Plus: .pem, .der, .p7b, .pfx formats for maximum compatibility
 ```

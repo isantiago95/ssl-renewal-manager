@@ -29,7 +29,7 @@ echo ""
 if [ "$FIRST_CERT_MODE" = true ]; then
     # First certificate mode - always ask for domain and email
     echo "🌐 Enter the domain name for SSL certificate creation:"
-    read -p "Domain (e.g., example.com): " DOMAIN_NAME
+    read -p "Domain (e.g., your-domain.com): " DOMAIN_NAME
     
     echo "📧 Enter your email address for Let's Encrypt account:"
     read -p "Email: " EMAIL_ADDRESS
@@ -42,7 +42,7 @@ else
     # Renewal mode - ask for domain or use argument
     if [ -z "$1" ]; then
         echo "🌐 Enter the domain name for SSL certificate renewal:"
-        read -p "Domain (e.g., example.com): " DOMAIN_NAME
+        read -p "Domain (e.g., your-domain.com): " DOMAIN_NAME
     else
         DOMAIN_NAME="$1"
     fi
