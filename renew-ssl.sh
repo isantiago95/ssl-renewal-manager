@@ -116,8 +116,8 @@ echo ""
 export DOMAIN_NAME
 export DOMAIN_FOLDER
 
-# Run docker-compose and capture ALL output
-docker-compose up 2>&1
+# Run docker-compose with proper cleanup
+docker-compose up --abort-on-container-exit --exit-code-from ssl-export
 
 # Capture the exit code
 DOCKER_EXIT_CODE=$?

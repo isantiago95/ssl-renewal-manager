@@ -56,32 +56,12 @@ services:
         # Set proper permissions
         chmod 644 /export/\$DOMAIN_FOLDER/*.* &&
         
-        # Log success
-        echo \"All certificate formats exported successfully for \$DOMAIN_NAME at \$(date)\" >> /var/log/ssl/export.log &&
-        echo 'SUCCESS: SSL certificates ready for import' &&
-        echo 'Domain: \$DOMAIN_NAME' &&
-        echo '' &&
-        echo 'Certificate files generated in certificates/\$DOMAIN_FOLDER/:' &&
-        echo '' &&
-        echo '🔑 REQUIRED FORMATS:' &&
-        echo '  - \$DOMAIN_NAME.key (Private Key)' &&
-        echo '  - \$DOMAIN_NAME.crt (Certificate)' &&
-        echo '  - intermediate.crt (Intermediate Certificate Chain)' &&
-        echo '  - \$DOMAIN_NAME.ca-bundle (CA Bundle - same as intermediate)' &&
-        echo '' &&
-        echo '📋 STANDARD FORMATS:' &&
-        echo '  - privkey.pem (Private Key - PEM)' &&
-        echo '  - cert.pem (Certificate - PEM)' &&
-        echo '  - chain.pem (Certificate Chain - PEM)' &&
-        echo '  - fullchain.pem (Full Chain - PEM)' &&
-        echo '' &&
-        echo '🔧 ADDITIONAL FORMATS:' &&
-        echo '  - \$DOMAIN_NAME.der (Certificate - DER binary)' &&
-        echo '  - \$DOMAIN_NAME.key.der (Private Key - DER binary)' &&
-        echo '  - \$DOMAIN_NAME.p7b (Certificate Chain - PKCS#7)' &&
-        echo '  - \$DOMAIN_NAME.pfx (Certificate + Key - PKCS#12, no password)' &&
-        echo '' &&
-        ls -la /export/\$DOMAIN_FOLDER/ 2>/dev/null || true
+        # Log success and show summary
+        echo \"Certificate export completed for \$DOMAIN_NAME at \$(date)\" >> /var/log/ssl/export.log &&
+        echo 'SUCCESS: SSL certificates exported in all formats' &&
+        echo 'Generated files:' &&
+        ls -1 /export/\$DOMAIN_FOLDER/ 2>/dev/null | wc -l | xargs echo 'Total files created:' &&
+        echo 'Export complete - container exiting'
       else
         echo 'ERROR: Certificate files not found at /certs/live/\$DOMAIN_NAME/' &&
         echo 'Available directories:' &&
