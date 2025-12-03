@@ -36,7 +36,7 @@ ssl-manager/
 
 ```bash
 # Clone the repository
-git clone https://github.com/isantiago95/ssl-renewal-manager
+git clone https://github.com/isantiago95/ssl-renewal-manager ssl-manager
 cd ssl-manager
 
 # Make the script executable
@@ -86,6 +86,8 @@ You should see: `privkey.pem` and `fullchain.pem` ready for use!
 
 ### Automated Renewal Setup
 
+#### Option 1: Cron job (not tested)
+
 Set up a monthly cron job for automatic renewal:
 
 ```bash
@@ -95,6 +97,46 @@ crontab -e
 # Add this line for monthly renewal on the 1st at 2 AM
 # Replace /path/to/ssl-manager and your-domain.com with your values
 0 2 1 * * cd /path/to/ssl-manager && ./renew-ssl.sh your-domain.com
+```
+
+#### Option 2: Synology DSM Task Scheduler (Tested)
+
+**Step 1: Create the Task**
+
+Navigate to: DSM → Control Panel → Task Scheduler → Create → Scheduled Task → User-defined script
+
+**Step 2: General Settings**
+
+Configure the General tab:
+
+- Task name: `SSL Certificate Auto Renewal`
+- User: `root` or `your_user_name` (make sure the user has Docker permissions)
+- Enabled: ✅ Check this box
+
+**Step 3: Schedule Settings**
+
+Configure the Schedule tab:
+
+- Date: Run on the following date
+- Repeat: Monthly
+- Date: Select `1` (1st of every month)
+- Time: `02:00` (2 AM - low traffic time)
+- Frequency: Every month
+
+**Step 4: Task Settings**
+
+Configure the Task Settings tab:
+
+- Send run details by email: ✅ (Optional - for email notifications)
+- Email: Your email address
+- Send run details only when the script terminates abnormally: ✅ (Recommended)
+
+Add the following user-defined script:
+
+```bash
+#!/bin/bash
+# replace your-domain.com
+/volume1/docker/ssl-manager/renew-ssl.sh your-domain.com
 ```
 
 ## 📋 Certificate Usage
