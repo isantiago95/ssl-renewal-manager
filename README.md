@@ -181,7 +181,7 @@ After successful renewal, certificates are exported to `./certificates/your_doma
 
    > Note: Intermediate certificate for Synology DSM is optional, but some services may require it, such as the VPN Server. (See [this post](https://community.synology.com/enu/forum/1/post/128099))
 
-   ![dsm-import-files-image](images/dsm-import-ssl-files.png)
+   ![dsm-import-files-image](screenshots/dsm-import-ssl-files.png)
 
    2. **Option 2: Standard PEM format**
       1. - **Private Key**: `privkey.pem` or `your-domain.key`
