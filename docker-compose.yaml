@@ -36,10 +36,11 @@ services:
         cp /certs/live/\$DOMAIN_NAME/chain.pem /export/\$DOMAIN_FOLDER/ &&
         cp /certs/live/\$DOMAIN_NAME/fullchain.pem /export/\$DOMAIN_FOLDER/ &&
         
-        # 2. Required formats: .key, .crt, intermediate
+        # 2. Required formats: .key, .crt, intermediate, ca-bundle
         cp /certs/live/\$DOMAIN_NAME/privkey.pem /export/\$DOMAIN_FOLDER/\$DOMAIN_NAME.key &&
         cp /certs/live/\$DOMAIN_NAME/cert.pem /export/\$DOMAIN_FOLDER/\$DOMAIN_NAME.crt &&
         cp /certs/live/\$DOMAIN_NAME/chain.pem /export/\$DOMAIN_FOLDER/intermediate.crt &&
+        cp /certs/live/\$DOMAIN_NAME/chain.pem /export/\$DOMAIN_FOLDER/\$DOMAIN_NAME.ca-bundle &&
         
         # 3. Additional formats for compatibility
         # DER format (binary) - handle both RSA and ECDSA keys
@@ -65,7 +66,8 @@ services:
         echo '🔑 REQUIRED FORMATS:' &&
         echo '  - \$DOMAIN_NAME.key (Private Key)' &&
         echo '  - \$DOMAIN_NAME.crt (Certificate)' &&
-        echo '  - intermediate.crt (Intermediate Certificate)' &&
+        echo '  - intermediate.crt (Intermediate Certificate Chain)' &&
+        echo '  - \$DOMAIN_NAME.ca-bundle (CA Bundle - same as intermediate)' &&
         echo '' &&
         echo '📋 STANDARD FORMATS:' &&
         echo '  - privkey.pem (Private Key - PEM)' &&
