@@ -6,10 +6,8 @@ services:
       - ./letsencrypt-config:/etc/letsencrypt
       - ./letsencrypt-lib:/var/lib/letsencrypt
       - ./logs:/var/log/certbot
-    command: renew --force-renewal --manual --preferred-challenges dns
+    command: renew --force-renewal
     restart: 'no'
-    tty: true
-    stdin_open: true
 
   ssl-export:
     image: alpine:latest
@@ -44,9 +42,9 @@ services:
         cp /certs/live/\$DOMAIN_NAME/chain.pem /export/\$DOMAIN_FOLDER/intermediate.crt &&
         
         # 3. Additional formats for compatibility
-        # DER format (binary)
+        # DER format (binary) - handle both RSA and ECDSA keys
         openssl x509 -in /certs/live/\$DOMAIN_NAME/cert.pem -outform DER -out /export/\$DOMAIN_FOLDER/\$DOMAIN_NAME.der &&
-        openssl rsa -in /certs/live/\$DOMAIN_NAME/privkey.pem -outform DER -out /export/\$DOMAIN_FOLDER/\$DOMAIN_NAME.key.der &&
+        openssl pkey -in /certs/live/\$DOMAIN_NAME/privkey.pem -outform DER -out /export/\$DOMAIN_FOLDER/\$DOMAIN_NAME.key.der &&
         
         # P7B format (PKCS#7)
         openssl crl2pkcs7 -nocrl -certfile /certs/live/\$DOMAIN_NAME/fullchain.pem -out /export/\$DOMAIN_FOLDER/\$DOMAIN_NAME.p7b &&
