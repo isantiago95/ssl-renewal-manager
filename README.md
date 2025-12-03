@@ -36,7 +36,7 @@ ssl-manager/
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/ssl-manager.git
+git clone https://github.com/isantiago95/ssl-renewal-manager
 cd ssl-manager
 ```
 
@@ -277,7 +277,7 @@ chmod 644 ./certificates/your_domain_com/*.pem
 
 ```bash
 # Clone and setup
-git clone https://github.com/your-username/ssl-manager.git
+git clone https://github.com/isantiago95/ssl-renewal-manager
 cd ssl-manager
 
 # Create your first certificate (interactive)
