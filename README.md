@@ -32,52 +32,39 @@ ssl-manager/
 
 ## 🚀 Quick Setup
 
-### 1. Clone and Setup
+### 1. Clone the Repository
 
 ```bash
 # Clone the repository
 git clone https://github.com/your-username/ssl-manager.git
 cd ssl-manager
-
-# Create directories
-mkdir -p {letsencrypt-config,letsencrypt-lib,logs}
 ```
 
-### 2. Initial Certificate Creation
+### 2. Create Your First Certificate
 
-Create your first certificate (interactive - requires DNS TXT record):
+Run the script with the `--first-cert` flag to create your initial certificate:
 
 ```bash
-# Replace with your domain and email
-DOMAIN="example.com"
-EMAIL="your-email@example.com"
-
-# Create initial certificate
-docker run -it --rm \
-  -v "$(pwd)/letsencrypt-config:/etc/letsencrypt" \
-  -v "$(pwd)/letsencrypt-lib:/var/lib/letsencrypt" \
-  certbot/certbot certonly -v --manual --preferred-challenges dns \
-  -d "$DOMAIN" -d "*.$DOMAIN" \
-  --agree-tos --email "$EMAIL"
+./renew-ssl.sh --first-cert
 ```
 
-**Important**: During this step, you'll need to add a DNS TXT record to your domain DNS. Follow the prompts carefully.
+The script will interactively ask you for:
 
-### 3. Verify Initial Setup
+- **Domain name** (e.g., `example.com`) - supports wildcards
+- **Email address** (for Let's Encrypt account registration)
+
+**Important**: During this process, you'll need to add a DNS TXT record to your domain DNS registry to validate ownership. Follow the prompts carefully and wait for DNS propagation before continuing.
+
+### 3. Verify Setup
 
 ```bash
-# Check that certificates were created (replace example.com with your domain)
-ls -la ./letsencrypt-config/live/example.com/
+# Check that certificates were created and exported,
+# Replace "example_com" with your domain name switching the `dot` with `underscore`:
+# example.com -> example_com
+ls -la ./certificates/example_com/
 ```
 
-You should see: `privkey.pem`, `fullchain.pem`, `cert.pem`, `chain.pem`
-
-### 4. Run Your First Renewal
-
-```bash
-# This will export certificates to ./certificates/example_com/
-./renew-ssl.sh example.com
-```
+You should see: `privkey.pem` and `fullchain.pem` ready for use!
 
 ## 🔄 Certificate Renewal
 
@@ -89,6 +76,9 @@ You should see: `privkey.pem`, `fullchain.pem`, `cert.pem`, `chain.pem`
 
 # Or specify domain directly
 ./renew-ssl.sh example.com
+
+# For first-time certificate creation
+./renew-ssl.sh --first-cert
 ```
 
 ### Automated Renewal Setup
@@ -117,9 +107,10 @@ After successful renewal, certificates are exported to `./certificates/your_doma
 
 #### Synology DSM
 
-1. Go to **DSM > Control Panel > Security > Certificate**
-2. Click **Add > Import certificate**
-3. Select the files from `certificates/your_domain_com/`:
+1. Download the cert files to your computer due to the DSM interface doesn't let you import files from the same synology system, only upload them from your computer.
+2. Go to **DSM > Control Panel > Security > Certificate**
+3. Click **Add > Import certificate**
+4. Select the files from `path/to/your/downloaded/cert/files`:
    - **Private Key**: `privkey.pem`
    - **Certificate**: `fullchain.pem`
 
@@ -224,17 +215,14 @@ chmod 644 ./certificates/your_domain_com/*.pem
 # Clone and setup
 git clone https://github.com/your-username/ssl-manager.git
 cd ssl-manager
-mkdir -p {letsencrypt-config,letsencrypt-lib,logs}
 
-# Create initial certificate for example.com
-docker run -it --rm \
-  -v "$(pwd)/letsencrypt-config:/etc/letsencrypt" \
-  -v "$(pwd)/letsencrypt-lib:/var/lib/letsencrypt" \
-  certbot/certbot certonly --manual --preferred-challenges dns \
-  -d "example.com" -d "*.example.com" \
-  --agree-tos --email "your-email@example.com"
+# Create your first certificate (interactive)
+./renew-ssl.sh --first-cert
+# Enter your domain: example.com
+# Enter your email: your-email@example.com
+# Follow DNS TXT record instructions
 
-# Renew and export certificates
+# For renewals, just run:
 ./renew-ssl.sh example.com
 
 # Your certificates are now in:

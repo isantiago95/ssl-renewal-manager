@@ -4,24 +4,53 @@
 PROJECT_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$PROJECT_DIR"
 
-echo "======================================================"
-echo "SSL Certificate Renewal Process"
-echo "======================================================"
+# Check for --first-cert flag
+FIRST_CERT_MODE=false
+if [ "$1" = "--first-cert" ]; then
+    FIRST_CERT_MODE=true
+    shift # Remove the flag from arguments
+fi
+
+if [ "$FIRST_CERT_MODE" = true ]; then
+    echo "======================================================"
+    echo "SSL Certificate Initial Creation"
+    echo "======================================================"
+else
+    echo "======================================================"
+    echo "SSL Certificate Renewal Process"
+    echo "======================================================"
+fi
+
 echo "Time: $(date)"
 echo "Location: $(pwd)"
 echo ""
 
-# Ask for domain name
-if [ -z "$1" ]; then
-    echo "🌐 Enter the domain name for SSL certificate renewal:"
+# Handle domain name input
+if [ "$FIRST_CERT_MODE" = true ]; then
+    # First certificate mode - always ask for domain and email
+    echo "🌐 Enter the domain name for SSL certificate creation:"
     read -p "Domain (e.g., example.com): " DOMAIN_NAME
+    
+    echo "📧 Enter your email address for Let's Encrypt account:"
+    read -p "Email: " EMAIL_ADDRESS
+    
+    if [ -z "$DOMAIN_NAME" ] || [ -z "$EMAIL_ADDRESS" ]; then
+        echo "❌ ERROR: Both domain name and email are required!"
+        exit 1
+    fi
 else
-    DOMAIN_NAME="$1"
-fi
-
-if [ -z "$DOMAIN_NAME" ]; then
-    echo "❌ ERROR: Domain name is required!"
-    exit 1
+    # Renewal mode - ask for domain or use argument
+    if [ -z "$1" ]; then
+        echo "🌐 Enter the domain name for SSL certificate renewal:"
+        read -p "Domain (e.g., example.com): " DOMAIN_NAME
+    else
+        DOMAIN_NAME="$1"
+    fi
+    
+    if [ -z "$DOMAIN_NAME" ]; then
+        echo "❌ ERROR: Domain name is required!"
+        exit 1
+    fi
 fi
 
 # Convert domain to safe folder name (replace dots with underscores)
@@ -29,19 +58,58 @@ DOMAIN_FOLDER=$(echo "$DOMAIN_NAME" | sed 's/\./_/g')
 
 echo "📋 Configuration:"
 echo "   Domain: $DOMAIN_NAME"
+if [ "$FIRST_CERT_MODE" = true ]; then
+    echo "   Email: $EMAIL_ADDRESS"
+fi
 echo "   Output folder: certificates/$DOMAIN_FOLDER/"
 echo ""
 
-# Create certificates directory if it doesn't exist
+# Create required directories
 mkdir -p "$PROJECT_DIR/certificates/$DOMAIN_FOLDER"
+mkdir -p "$PROJECT_DIR/letsencrypt-config"
+mkdir -p "$PROJECT_DIR/letsencrypt-lib" 
+mkdir -p "$PROJECT_DIR/logs"
+
+if [ "$FIRST_CERT_MODE" = true ]; then
+    echo "🆕 Creating initial SSL certificate..."
+    echo "📝 Note: You will need to add a DNS TXT record during this process"
+    echo ""
+    
+    # Create initial certificate using certbot directly
+    docker run -it --rm \
+        -v "$PROJECT_DIR/letsencrypt-config:/etc/letsencrypt" \
+        -v "$PROJECT_DIR/letsencrypt-lib:/var/lib/letsencrypt" \
+        certbot/certbot certonly -v --manual --preferred-challenges dns \
+        -d "$DOMAIN_NAME" -d "*.$DOMAIN_NAME" \
+        --agree-tos --email "$EMAIL_ADDRESS"
+    
+    CERTBOT_EXIT_CODE=$?
+    
+    if [ $CERTBOT_EXIT_CODE -eq 0 ]; then
+        echo ""
+        echo "✅ Initial certificate created successfully!"
+        echo "🔄 Now exporting certificate files..."
+        echo ""
+    else
+        echo ""
+        echo "❌ Failed to create initial certificate"
+        echo "   → Please check the error messages above"
+        echo "   → Ensure you added the DNS TXT record correctly"
+        exit 1
+    fi
+fi
 
 # Check if compose file exists
 if [ ! -f "docker-compose.yaml" ]; then
-    echo "❌ ERROR: docker-compose.yml not found in $(pwd)"
+    echo "❌ ERROR: docker-compose.yaml not found in $(pwd)"
     exit 1
 fi
 
-echo "🔄 Starting Docker containers for SSL renewal..."
+if [ "$FIRST_CERT_MODE" = true ]; then
+    echo "📦 Exporting certificates..."
+else
+    echo "🔄 Starting Docker containers for SSL renewal..."
+fi
 echo ""
 
 # Export environment variables for docker-compose
@@ -121,17 +189,30 @@ echo "======================================================"
 echo "End time: $(date)"
 
 if [ -f "$CERT_FOLDER/privkey.pem" ] && [ -f "$CERT_FOLDER/fullchain.pem" ]; then
-    echo "📧 RESULT: SUCCESS - New SSL certificates are ready for $DOMAIN_NAME"
+    if [ "$FIRST_CERT_MODE" = true ]; then
+        echo "📧 RESULT: SUCCESS - Initial SSL certificates created and exported!"
+        echo "   → Your SSL certificates for $DOMAIN_NAME are ready"
+        echo "   → Set up automatic renewal with: ./renew-ssl.sh $DOMAIN_NAME"
+    else
+        echo "📧 RESULT: SUCCESS - SSL certificates renewed for $DOMAIN_NAME"
+    fi
     echo "   → Certificate files in certificates/$DOMAIN_FOLDER/:"
     echo "     • Private Key: privkey.pem"
     echo "     • Full Chain: fullchain.pem (includes certificate + intermediate)"
     echo "   → Files location: $CERT_FOLDER"
     echo "   → Import via your server's SSL certificate management interface"
 else
-    echo "📧 RESULT: FAILED - SSL certificate renewal unsuccessful"
-    echo "   → Check the logs above for error details"
-    echo "   → The certificates exist, but export failed"
-    echo "   → Try running: DOMAIN_NAME=$DOMAIN_NAME DOMAIN_FOLDER=$DOMAIN_FOLDER docker-compose up ssl-export"
+    if [ "$FIRST_CERT_MODE" = true ]; then
+        echo "📧 RESULT: FAILED - Initial certificate creation unsuccessful"
+        echo "   → The certificate may have been created but export failed"
+        echo "   → Check: ls -la ./letsencrypt-config/live/$DOMAIN_NAME/"
+        echo "   → If certificates exist, try: ./renew-ssl.sh $DOMAIN_NAME"
+    else
+        echo "📧 RESULT: FAILED - SSL certificate renewal unsuccessful"
+        echo "   → Check the logs above for error details"
+        echo "   → The certificates exist, but export failed"
+        echo "   → Try running: DOMAIN_NAME=$DOMAIN_NAME DOMAIN_FOLDER=$DOMAIN_FOLDER docker-compose up ssl-export"
+    fi
 fi
 
 echo "======================================================"
