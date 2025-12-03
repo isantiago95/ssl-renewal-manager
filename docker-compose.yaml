@@ -1,0 +1,57 @@
+services:
+  certbot-renew:
+    image: certbot/certbot:latest
+    container_name: certbot-renew
+    volumes:
+      - ./letsencrypt-config:/etc/letsencrypt
+      - ./letsencrypt-lib:/var/lib/letsencrypt
+      - ./logs:/var/log/certbot
+    command: renew --force-renewal --manual --preferred-challenges dns
+    restart: 'no'
+    tty: true
+    stdin_open: true
+
+  ssl-export:
+    image: alpine:latest
+    container_name: ssl-export
+    volumes:
+      - ./letsencrypt-config:/certs:ro
+      - ./certificates:/export
+      - ./logs:/var/log/ssl
+    environment:
+      - DOMAIN_NAME=${DOMAIN_NAME}
+      - DOMAIN_FOLDER=${DOMAIN_FOLDER}
+    command: >
+      sh -c "
+      apk add --no-cache openssl &&
+      if [ -f /certs/live/\$DOMAIN_NAME/privkey.pem ]; then
+        echo 'Exporting certificates for domain: \$DOMAIN_NAME' &&
+        
+        # Create directory for domain certificates
+        mkdir -p /export/\$DOMAIN_FOLDER &&
+        
+        # Copy certificate files (keep original names)
+        cp /certs/live/\$DOMAIN_NAME/privkey.pem /export/\$DOMAIN_FOLDER/ &&
+        cp /certs/live/\$DOMAIN_NAME/fullchain.pem /export/\$DOMAIN_FOLDER/ &&
+        
+        # Set proper permissions
+        chmod 644 /export/\$DOMAIN_FOLDER/*.pem &&
+        
+        # Log success
+        echo \"Certificates exported successfully for \$DOMAIN_NAME at \$(date)\" >> /var/log/ssl/export.log &&
+        echo 'SUCCESS: SSL certificates ready for import' &&
+        echo 'Domain: \$DOMAIN_NAME' &&
+        echo 'Files generated in certificates/\$DOMAIN_FOLDER/:' &&
+        echo '  - privkey.pem (private key)' &&
+        echo '  - fullchain.pem (certificate + chain)' &&
+        ls -la /export/\$DOMAIN_FOLDER/*.pem 2>/dev/null || true
+      else
+        echo 'ERROR: Certificate files not found at /certs/live/\$DOMAIN_NAME/' &&
+        echo 'Available directories:' &&
+        ls -la /certs/live/ 2>/dev/null || true &&
+        echo 'FAILED: SSL certificate renewal unsuccessful for \$DOMAIN_NAME' >> /var/log/ssl/export.log
+      fi
+      "
+    restart: 'no'
+    depends_on:
+      - certbot-renew
